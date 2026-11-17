@@ -4,6 +4,7 @@ RUN apk update && apk upgrade --no-cache
 WORKDIR /app
 COPY package*.json ./
 RUN npm install
+RUN npm install tar@7.5.19
 COPY . .
 # Sécurisation des droits d'exécution (faille root)
 USER node
