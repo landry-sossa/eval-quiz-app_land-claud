@@ -71,8 +71,8 @@ jobs:
 
       - name: Build, Tag & Push des images
         run: |
-          docker build -t ${{ env.ACR_SERVER }}/${{ env.BACKEND_NAME }}:${{ github.sha }} ./backend
-          docker build -t ${{ env.ACR_SERVER }}/${{ env.FRONTEND_NAME }}:${{ github.sha }} ./frontend
+          docker build -f ./backend/Dockerfile.secure -t ${{ env.ACR_SERVER }}/${{ env.BACKEND_NAME }}:${{ github.sha }} ./backend
+          docker build -f ./Dockerfile.secure -t ${{ env.ACR_SERVER }}/${{ env.FRONTEND_NAME }}:${{ github.sha }} .
           docker push ${{ env.ACR_SERVER }}/${{ env.BACKEND_NAME }}:${{ github.sha }}
           docker push ${{ env.ACR_SERVER }}/${{ env.FRONTEND_NAME }}:${{ github.sha }}
 
