@@ -21,10 +21,12 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Build de l'image Backend
-        run: docker build -t backend-test ./backend
+        # On cible le dossier backend, et on précise le fichier sécurisé ou simple selon le besoin
+        run: docker build -f ./backend/Dockerfile.secure -t backend-test ./backend
 
       - name: Build de l'image Frontend
-        run: docker build -t frontend-test ./frontend
+        # Le frontend est à la racine (.), et on utilise le fichier sécurisé ou simple selon le besoin
+        run: docker build -f ./Dockerfile.secure -t frontend-test .
 
       - name: Scan Trivy sur le Backend
         uses: aquasecurity/trivy-action@master
