@@ -162,3 +162,5 @@ vite.config.ts.timestamp-*
 node_modules/
 dist/
 *.log
+
+script/azure.env

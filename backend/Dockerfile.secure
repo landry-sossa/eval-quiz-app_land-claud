@@ -1,0 +1,11 @@
+FROM node:20-alpine
+# Correction des failles OS (Alpine)
+RUN apk update && apk upgrade --no-cache
+WORKDIR /app
+COPY package*.json ./
+RUN npm install
+COPY . .
+# Sécurisation des droits d'exécution (faille root)
+USER node
+EXPOSE 3007
+CMD ["npm", "start"]
