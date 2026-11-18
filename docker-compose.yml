@@ -1,0 +1,66 @@
+# version: '3.8'
+# version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: quiz_db
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database:/docker-entrypoint-initdb.d
+    networks:
+      - quiz_network
+
+  backend:
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile.secure # <-- Ajout
+    container_name: quiz_backend
+    restart: always
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      - ADMIN_USERNAME=${ADMIN_USERNAME}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      - JWT_SECRET=${JWT_SECRET}
+      - RESEND_API_KEY=${RESEND_API_KEY}
+      - FROM_EMAIL=${FROM_EMAIL}
+    ports:
+      - "3007:3007"
+    depends_on:
+      - db
+    networks:
+      - quiz_network
+
+  frontend:
+    build: 
+      context: .
+      dockerfile: Dockerfile.secure
+    container_name: quiz_frontend
+    restart: always
+    ports:
+      - "8088:80"
+    depends_on:
+      - backend
+    networks:
+      - quiz_network
+
+
+  trivy:
+    image: aquasec/trivy:latest
+    profiles:
+      - security  # Ce profil empêche le conteneur de démarrer par défaut
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./preuves/J2:/reports # Pratique pour sauvegarder les rapports plus tard
+
+volumes:
+  postgres_data:
+
+networks:
+  quiz_network:
+    driver: bridge

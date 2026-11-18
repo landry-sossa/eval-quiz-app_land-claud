@@ -1,0 +1,96 @@
+name: Quiz App CI/CD Pipeline
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+env:
+  ACR_SERVER: acrquizappoet72.azurecr.io
+  RESOURCE_GROUP: rg-quizapp-eval
+  BACKEND_NAME: quiz-backend
+  FRONTEND_NAME: quiz-frontend
+
+jobs:
+  ci-build-and-scan:
+    name: Build & Trivy Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@v4
+
+      - name: Build de l'image Backend
+        # On cible le dossier backend, et on précise le fichier sécurisé ou simple selon le besoin
+        run: docker build --no-cache -f ./backend/Dockerfile.secure -t backend-test ./backend
+      - name: Build de l'image Frontend
+        # Le frontend est à la racine (.), et on utilise le fichier sécurisé ou simple selon le besoin
+        run: docker build --no-cache -f ./Dockerfile.secure -t frontend-test .
+      - name: Scan Trivy sur le Backend
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'backend-test'
+          format: 'table'
+          exit-code: '0'     ##je le mets sur 1 si je veux bloquer le pipeline si des vulnérabilités sont trouvées
+          severity: 'CRITICAL'
+
+      - name: Scan Trivy sur le Frontend
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'frontend-test'
+          format: 'table'
+          exit-code: '0' 
+          severity: 'CRITICAL'
+
+  cd-deploy:
+    name: Deploy to Azure
+    needs: ci-build-and-scan
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    
+    # Autorise GitHub à demander un jeton OIDC à Azure
+    permissions:
+      id-token: write
+      contents: read
+      
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@v4
+
+      - name: Connexion à Azure (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Connexion à l'ACR
+        run: az acr login --name acrquizappoet72
+
+      - name: Build, Tag & Push des images
+        run: |
+          docker build --no-cache -f ./backend/Dockerfile.secure -t ${{ env.ACR_SERVER }}/${{ env.BACKEND_NAME }}:${{ github.sha }} ./backend
+          docker build --no-cache -f ./Dockerfile.secure -t ${{ env.ACR_SERVER }}/${{ env.FRONTEND_NAME }}:${{ github.sha }} .
+          docker push ${{ env.ACR_SERVER }}/${{ env.BACKEND_NAME }}:${{ github.sha }}
+          docker push ${{ env.ACR_SERVER }}/${{ env.FRONTEND_NAME }}:${{ github.sha }}
+
+      - name: Déploiement du Backend sur Container Apps
+        run: |
+          if az containerapp show --name ${{ env.BACKEND_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} &>/dev/null; then
+            echo "Mise à jour du backend..."
+            az containerapp update --name ${{ env.BACKEND_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --image ${{ env.ACR_SERVER }}/${{ env.BACKEND_NAME }}:${{ github.sha }} --set-env-vars "DATABASE_URL=${{ secrets.DATABASE_URL }}" "JWT_SECRET=${{ secrets.JWT_SECRET }}" "RESEND_API_KEY=${{ secrets.RESEND_API_KEY }}" "ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }}" "ADMIN_USERNAME=admin" "FROM_EMAIL=Quiz App <noreply@votredomaine.com>"
+          else
+            echo "Création du backend..."
+            az containerapp create --name ${{ env.BACKEND_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --environment env-quizapp --image ${{ env.ACR_SERVER }}/${{ env.BACKEND_NAME }}:${{ github.sha }} --registry-server ${{ env.ACR_SERVER }} --registry-username $(az acr credential show --name acrquizappoet72 --query username -o tsv) --registry-password $(az acr credential show --name acrquizappoet72 --query passwords[0].value -o tsv) --target-port 3007 --ingress external --env-vars "DATABASE_URL=${{ secrets.DATABASE_URL }}" "JWT_SECRET=${{ secrets.JWT_SECRET }}" "RESEND_API_KEY=${{ secrets.RESEND_API_KEY }}" "ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }}" "ADMIN_USERNAME=admin" "FROM_EMAIL=Quiz App <noreply@votredomaine.com>"
+          fi
+
+      - name: Déploiement du Frontend sur Container Apps
+        run: |
+          BACKEND_URL=$(az containerapp show --name ${{ env.BACKEND_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --query properties.configuration.ingress.fqdn -o tsv)
+          if az containerapp show --name ${{ env.FRONTEND_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} &>/dev/null; then
+            echo "Mise à jour du frontend..."
+            az containerapp update --name ${{ env.FRONTEND_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --image ${{ env.ACR_SERVER }}/${{ env.FRONTEND_NAME }}:${{ github.sha }} --set-env-vars "BACKEND_URL=https://$BACKEND_URL"
+          else
+            echo "Création du frontend..."
+            az containerapp create --name ${{ env.FRONTEND_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --environment env-quizapp --image ${{ env.ACR_SERVER }}/${{ env.FRONTEND_NAME }}:${{ github.sha }} --registry-server ${{ env.ACR_SERVER }} --registry-username $(az acr credential show --name acrquizappoet72 --query username -o tsv) --registry-password $(az acr credential show --name acrquizappoet72 --query passwords[0].value -o tsv) --target-port 80 --ingress external --env-vars "BACKEND_URL=https://$BACKEND_URL"
+          fi
