@@ -22,12 +22,10 @@ jobs:
 
       - name: Build de l'image Backend
         # On cible le dossier backend, et on précise le fichier sécurisé ou simple selon le besoin
-        run: docker build -f ./backend/Dockerfile.secure -t backend-test ./backend
-
+        run: docker build --no-cache -f ./backend/Dockerfile.secure -t backend-test ./backend
       - name: Build de l'image Frontend
         # Le frontend est à la racine (.), et on utilise le fichier sécurisé ou simple selon le besoin
-        run: docker build -f ./Dockerfile.secure -t frontend-test .
-
+        run: docker build --no-cache -f ./Dockerfile.secure -t frontend-test .
       - name: Scan Trivy sur le Backend
         uses: aquasecurity/trivy-action@master
         with:
@@ -71,8 +69,8 @@ jobs:
 
       - name: Build, Tag & Push des images
         run: |
-          docker build -f ./backend/Dockerfile.secure -t ${{ env.ACR_SERVER }}/${{ env.BACKEND_NAME }}:${{ github.sha }} ./backend
-          docker build -f ./Dockerfile.secure -t ${{ env.ACR_SERVER }}/${{ env.FRONTEND_NAME }}:${{ github.sha }} .
+          docker build --no-cache -f ./backend/Dockerfile.secure -t ${{ env.ACR_SERVER }}/${{ env.BACKEND_NAME }}:${{ github.sha }} ./backend
+          docker build --no-cache -f ./Dockerfile.secure -t ${{ env.ACR_SERVER }}/${{ env.FRONTEND_NAME }}:${{ github.sha }} .
           docker push ${{ env.ACR_SERVER }}/${{ env.BACKEND_NAME }}:${{ github.sha }}
           docker push ${{ env.ACR_SERVER }}/${{ env.FRONTEND_NAME }}:${{ github.sha }}
 
