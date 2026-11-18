@@ -9,6 +9,9 @@ on:
 env:
   ACR_SERVER: acrquizappoet72.azurecr.io
   RESOURCE_GROUP: rg-quizapp-eval
+  # [MODIF] Environnement STANDARD (WorkloadProfiles), créé par deploy.sh.
+  # L'ancien "env-quizapp" était en mode Express (domaines personnalisés impossibles).
+  ACA_ENV: env-quizapp-std
   BACKEND_NAME: quiz-backend
   FRONTEND_NAME: quiz-frontend
 
@@ -81,7 +84,7 @@ jobs:
             az containerapp update --name ${{ env.BACKEND_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --image ${{ env.ACR_SERVER }}/${{ env.BACKEND_NAME }}:${{ github.sha }} --set-env-vars "DATABASE_URL=${{ secrets.DATABASE_URL }}" "JWT_SECRET=${{ secrets.JWT_SECRET }}" "RESEND_API_KEY=${{ secrets.RESEND_API_KEY }}" "ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }}" "ADMIN_USERNAME=admin" "FROM_EMAIL=Quiz App <noreply@votredomaine.com>"
           else
             echo "Création du backend..."
-            az containerapp create --name ${{ env.BACKEND_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --environment env-quizapp --image ${{ env.ACR_SERVER }}/${{ env.BACKEND_NAME }}:${{ github.sha }} --registry-server ${{ env.ACR_SERVER }} --registry-username $(az acr credential show --name acrquizappoet72 --query username -o tsv) --registry-password $(az acr credential show --name acrquizappoet72 --query passwords[0].value -o tsv) --target-port 3007 --ingress external --env-vars "DATABASE_URL=${{ secrets.DATABASE_URL }}" "JWT_SECRET=${{ secrets.JWT_SECRET }}" "RESEND_API_KEY=${{ secrets.RESEND_API_KEY }}" "ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }}" "ADMIN_USERNAME=admin" "FROM_EMAIL=Quiz App <noreply@votredomaine.com>"
+            az containerapp create --name ${{ env.BACKEND_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --environment ${{ env.ACA_ENV }} --image ${{ env.ACR_SERVER }}/${{ env.BACKEND_NAME }}:${{ github.sha }} --registry-server ${{ env.ACR_SERVER }} --registry-username $(az acr credential show --name acrquizappoet72 --query username -o tsv) --registry-password $(az acr credential show --name acrquizappoet72 --query passwords[0].value -o tsv) --target-port 3007 --ingress external --env-vars "DATABASE_URL=${{ secrets.DATABASE_URL }}" "JWT_SECRET=${{ secrets.JWT_SECRET }}" "RESEND_API_KEY=${{ secrets.RESEND_API_KEY }}" "ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }}" "ADMIN_USERNAME=admin" "FROM_EMAIL=Quiz App <noreply@votredomaine.com>"
           fi
 
       - name: Déploiement du Frontend sur Container Apps
@@ -92,5 +95,15 @@ jobs:
             az containerapp update --name ${{ env.FRONTEND_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --image ${{ env.ACR_SERVER }}/${{ env.FRONTEND_NAME }}:${{ github.sha }} --set-env-vars "BACKEND_URL=https://$BACKEND_URL"
           else
             echo "Création du frontend..."
-            az containerapp create --name ${{ env.FRONTEND_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --environment env-quizapp --image ${{ env.ACR_SERVER }}/${{ env.FRONTEND_NAME }}:${{ github.sha }} --registry-server ${{ env.ACR_SERVER }} --registry-username $(az acr credential show --name acrquizappoet72 --query username -o tsv) --registry-password $(az acr credential show --name acrquizappoet72 --query passwords[0].value -o tsv) --target-port 80 --ingress external --env-vars "BACKEND_URL=https://$BACKEND_URL"
+            az containerapp create --name ${{ env.FRONTEND_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --environment ${{ env.ACA_ENV }} --image ${{ env.ACR_SERVER }}/${{ env.FRONTEND_NAME }}:${{ github.sha }} --registry-server ${{ env.ACR_SERVER }} --registry-username $(az acr credential show --name acrquizappoet72 --query username -o tsv) --registry-password $(az acr credential show --name acrquizappoet72 --query passwords[0].value -o tsv) --target-port 80 --ingress external --env-vars "BACKEND_URL=https://$BACKEND_URL"
           fi
+
+
+      - name:  Afficher les URLs de l'application
+        run: |
+          FRONTEND_URL=$(az containerapp show --name ${{ env.FRONTEND_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --query properties.configuration.ingress.fqdn -o tsv)
+          BACKEND_URL=$(az containerapp show --name ${{ env.BACKEND_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --query properties.configuration.ingress.fqdn -o tsv)
+          
+          echo "### 🎉 Déploiement réussi sur Azure !" >> $GITHUB_STEP_SUMMARY
+          echo "- 🌐 **Frontend (Site Web)** : [https://$FRONTEND_URL](https://$FRONTEND_URL)" >> $GITHUB_STEP_SUMMARY
+          echo "- ⚙️ **Backend (API)** : [https://$BACKEND_URL](https://$BACKEND_URL)" >> $GITHUB_STEP_SUMMARY
