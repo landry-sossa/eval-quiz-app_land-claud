@@ -6,7 +6,8 @@ IDENTITY_NAME="GitHubActions-OIDC"
 LOCATION="francecentral"
 
 echo -e "\n🔗 Configuration OIDC pour GitHub Actions"
-read -p "👉 Entrez votre dépôt GitHub (ex: VotrePseudo/eval-quiz-app) : " GITHUB_REPO
+echo "⚠️ Si GitHub utilise des IDs internes, copiez le 'subject' exact depuis les logs d'erreur."
+read -p "👉 Entrez le 'subject' OIDC exact (ex: repo:user/repo:ref:refs/heads/main) ex: landry-sossa@63510797/eval-quiz-app_land-claud@1461213819 : " OIDC_SUBJECT
 
 echo -e "\n1️⃣ Création de l'Identité Managée..."
 az identity create --name $IDENTITY_NAME --resource-group $RESOURCE_GROUP --location $LOCATION > /dev/null
@@ -27,7 +28,7 @@ az identity federated-credential create --name "GitHub-Trust" \
   --identity-name $IDENTITY_NAME \
   --resource-group $RESOURCE_GROUP \
   --issuer "https://token.actions.githubusercontent.com" \
-  --subject "repo:$GITHUB_REPO:ref:refs/heads/main" \
+  --subject "$OIDC_SUBJECT" \
   --audiences "api://AzureADTokenExchange" > /dev/null
 
 echo -e "\n✅ TERMINÉ ! Ajoutez ces 3 variables dans les Secrets de votre dépôt GitHub :"
