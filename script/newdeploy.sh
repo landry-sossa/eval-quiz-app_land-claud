@@ -137,106 +137,107 @@ for APP_NAME in $BACKEND_NAME $FRONTEND_NAME; do
     fi
 done
 
-# ==========================================
-# ETAPE 6 : Déploiement du Backend
-# ==========================================
-echo -e "\n${BLUE}[6/8] Déploiement du composant Backend...${NC}"
-if az containerapp show --name $BACKEND_NAME --resource-group $RESOURCE_GROUP &>/dev/null; then
-    echo -e "${YELLOW}[INFO] Le conteneur existe déjà. Application de la mise à jour...${NC}"
-    az containerapp update \
-      --name $BACKEND_NAME \
-      --resource-group $RESOURCE_GROUP \
-      --image $ACR_SERVER/quiz-backend:$VERSION \
-      --set-env-vars "DATABASE_URL=$DATABASE_URL" "ADMIN_USERNAME=$ADMIN_USERNAME" "ADMIN_PASSWORD=$ADMIN_PASSWORD" "JWT_SECRET=$JWT_SECRET" "RESEND_API_KEY=$RESEND_API_KEY" "FROM_EMAIL=$FROM_EMAIL" \
-      --output table
-else
-    echo -e "${GREEN}[INFO] Premier déploiement du conteneur backend...${NC}"
-    az containerapp create \
-      --name $BACKEND_NAME \
-      --resource-group $RESOURCE_GROUP \
-      --environment $ACA_ENV \
-      --image $ACR_SERVER/quiz-backend:$VERSION \
-      --registry-server $ACR_SERVER \
-      --registry-username $ACR_USERNAME \
-      --registry-password $ACR_PASSWORD \
-      --target-port 3007 \
-      --ingress external \
-      --env-vars "DATABASE_URL=$DATABASE_URL" "ADMIN_USERNAME=$ADMIN_USERNAME" "ADMIN_PASSWORD=$ADMIN_PASSWORD" "JWT_SECRET=$JWT_SECRET" "RESEND_API_KEY=$RESEND_API_KEY" "FROM_EMAIL=$FROM_EMAIL" \
-      --output table
-fi
+# # ==========================================
+# # ETAPE 6 : Déploiement du Backend
+# # ==========================================
+# echo -e "\n${BLUE}[6/8] Déploiement du composant Backend...${NC}"
+# if az containerapp show --name $BACKEND_NAME --resource-group $RESOURCE_GROUP &>/dev/null; then
+#     echo -e "${YELLOW}[INFO] Le conteneur existe déjà. Application de la mise à jour...${NC}"
+#     az containerapp update \
+#       --name $BACKEND_NAME \
+#       --resource-group $RESOURCE_GROUP \
+#       --image $ACR_SERVER/quiz-backend:$VERSION \
+#       --set-env-vars "DATABASE_URL=$DATABASE_URL" "ADMIN_USERNAME=$ADMIN_USERNAME" "ADMIN_PASSWORD=$ADMIN_PASSWORD" "JWT_SECRET=$JWT_SECRET" "RESEND_API_KEY=$RESEND_API_KEY" "FROM_EMAIL=$FROM_EMAIL" \
+#       --output table
+# else
+#     echo -e "${GREEN}[INFO] Premier déploiement du conteneur backend...${NC}"
+#     az containerapp create \
+#       --name $BACKEND_NAME \
+#       --resource-group $RESOURCE_GROUP \
+#       --environment $ACA_ENV \
+#       --image $ACR_SERVER/quiz-backend:$VERSION \
+#       --registry-server $ACR_SERVER \
+#       --registry-username $ACR_USERNAME \
+#       --registry-password $ACR_PASSWORD \
+#       --target-port 3007 \
+#       --ingress external \
+#       --env-vars "DATABASE_URL=$DATABASE_URL" "ADMIN_USERNAME=$ADMIN_USERNAME" "ADMIN_PASSWORD=$ADMIN_PASSWORD" "JWT_SECRET=$JWT_SECRET" "RESEND_API_KEY=$RESEND_API_KEY" "FROM_EMAIL=$FROM_EMAIL" \
+#       --output table
+# fi
 
-echo -e "${YELLOW}[INFO] Récupération du FQDN du Backend...${NC}"
-BACKEND_URL=$(az containerapp show --name $BACKEND_NAME --resource-group $RESOURCE_GROUP --query properties.configuration.ingress.fqdn -o tsv)
+# echo -e "${YELLOW}[INFO] Récupération du FQDN du Backend...${NC}"
+# BACKEND_URL=$(az containerapp show --name $BACKEND_NAME --resource-group $RESOURCE_GROUP --query properties.configuration.ingress.fqdn -o tsv)
+
 
 # ==========================================
 # ETAPE 7 : Déploiement du Frontend
 # ==========================================
-echo -e "\n${BLUE}[7/8] Déploiement du composant Frontend...${NC}"
-if az containerapp show --name $FRONTEND_NAME --resource-group $RESOURCE_GROUP &>/dev/null; then
-    echo -e "${YELLOW}[INFO] Le conteneur existe déjà. Application de la mise à jour...${NC}"
-    az containerapp update \
-      --name $FRONTEND_NAME \
-      --resource-group $RESOURCE_GROUP \
-      --image $ACR_SERVER/quiz-frontend:$VERSION \
-      --set-env-vars "BACKEND_URL=https://$BACKEND_URL" \
-      --output table
-else
-    echo -e "${GREEN}[INFO] Premier déploiement du conteneur frontend...${NC}"
-    az containerapp create \
-      --name $FRONTEND_NAME \
-      --resource-group $RESOURCE_GROUP \
-      --environment $ACA_ENV \
-      --image $ACR_SERVER/quiz-frontend:$VERSION \
-      --registry-server $ACR_SERVER \
-      --registry-username $ACR_USERNAME \
-      --registry-password $ACR_PASSWORD \
-      --target-port 80 \
-      --ingress external \
-      --env-vars "BACKEND_URL=https://$BACKEND_URL" \
-      --output table
-fi
+# echo -e "\n${BLUE}[7/8] Déploiement du composant Frontend...${NC}"
+# if az containerapp show --name $FRONTEND_NAME --resource-group $RESOURCE_GROUP &>/dev/null; then
+#     echo -e "${YELLOW}[INFO] Le conteneur existe déjà. Application de la mise à jour...${NC}"
+#     az containerapp update \
+#       --name $FRONTEND_NAME \
+#       --resource-group $RESOURCE_GROUP \
+#       --image $ACR_SERVER/quiz-frontend:$VERSION \
+#       --set-env-vars "BACKEND_URL=https://$BACKEND_URL" \
+#       --output table
+# else
+#     echo -e "${GREEN}[INFO] Premier déploiement du conteneur frontend...${NC}"
+#     az containerapp create \
+#       --name $FRONTEND_NAME \
+#       --resource-group $RESOURCE_GROUP \
+#       --environment $ACA_ENV \
+#       --image $ACR_SERVER/quiz-frontend:$VERSION \
+#       --registry-server $ACR_SERVER \
+#       --registry-username $ACR_USERNAME \
+#       --registry-password $ACR_PASSWORD \
+#       --target-port 80 \
+#       --ingress external \
+#       --env-vars "BACKEND_URL=https://$BACKEND_URL" \
+#       --output table
+# fi
 
-FRONTEND_URL=$(az containerapp show --name $FRONTEND_NAME --resource-group $RESOURCE_GROUP --query properties.configuration.ingress.fqdn -o tsv)
+# FRONTEND_URL=$(az containerapp show --name $FRONTEND_NAME --resource-group $RESOURCE_GROUP --query properties.configuration.ingress.fqdn -o tsv)
 
-# ==========================================
-# ETAPE 8 : Domaine personnalisé (Frontend)
-# ==========================================
-# [AJOUT] Le frontend vient d'être déployé : on affiche les DNS à créer, puis on rattache
-# le domaine. Au premier lancement, le rattachement échoue tant que le CNAME et le TXT
-# ne sont pas créés et propagés : relancez simplement le script ensuite (idempotent).
-echo -e "\n${BLUE}[8/8] Configuration du domaine personnalisé (${CUSTOM_DOMAIN})...${NC}"
+# # ==========================================
+# # ETAPE 8 : Domaine personnalisé (Frontend)
+# # ==========================================
+# # [AJOUT] Le frontend vient d'être déployé : on affiche les DNS à créer, puis on rattache
+# # le domaine. Au premier lancement, le rattachement échoue tant que le CNAME et le TXT
+# # ne sont pas créés et propagés : relancez simplement le script ensuite (idempotent).
+# echo -e "\n${BLUE}[8/8] Configuration du domaine personnalisé (${CUSTOM_DOMAIN})...${NC}"
 
-# Le Verification ID est propre à l'environnement : il change si l'environnement change.
-ENV_VERIFICATION_ID=$(az containerapp env show --name $ACA_ENV --resource-group $RESOURCE_GROUP --query properties.customDomainConfiguration.customDomainVerificationId -o tsv)
+# # Le Verification ID est propre à l'environnement : il change si l'environnement change.
+# ENV_VERIFICATION_ID=$(az containerapp env show --name $ACA_ENV --resource-group $RESOURCE_GROUP --query properties.customDomainConfiguration.customDomainVerificationId -o tsv)
 
-echo -e "${YELLOW}[INFO] Enregistrements DNS à créer chez le gestionnaire de la zone :${NC}"
-echo -e "       CNAME  ${CUSTOM_DOMAIN}  ->  ${FRONTEND_URL}"
-echo -e "       TXT    asuid.${CUSTOM_DOMAIN}  ->  ${ENV_VERIFICATION_ID}"
+# echo -e "${YELLOW}[INFO] Enregistrements DNS à créer chez le gestionnaire de la zone :${NC}"
+# echo -e "       CNAME  ${CUSTOM_DOMAIN}  ->  ${FRONTEND_URL}"
+# echo -e "       TXT    asuid.${CUSTOM_DOMAIN}  ->  ${ENV_VERIFICATION_ID}"
 
-# Le domaine est-il déjà rattaché à l'application ?
-ALREADY_BOUND=$(az containerapp hostname list --name $FRONTEND_NAME --resource-group $RESOURCE_GROUP --query "[?name=='${CUSTOM_DOMAIN}'] | length(@)" -o tsv)
+# # Le domaine est-il déjà rattaché à l'application ?
+# ALREADY_BOUND=$(az containerapp hostname list --name $FRONTEND_NAME --resource-group $RESOURCE_GROUP --query "[?name=='${CUSTOM_DOMAIN}'] | length(@)" -o tsv)
 
-if [ "$ALREADY_BOUND" != "0" ] && [ -n "$ALREADY_BOUND" ]; then
-    echo -e "${YELLOW}[INFO] Le domaine ${CUSTOM_DOMAIN} est déjà rattaché. Rien à faire.${NC}"
-    DOMAIN_BOUND="true"
-else
-    echo -e "${GREEN}[INFO] Rattachement du domaine avec certificat managé (gratuit)...${NC}"
-    # Un échec (DNS pas encore propagé, par exemple) ne doit pas faire échouer tout le script.
-    # Si la validation du certificat échoue avec l'app en "scale to zero",
-    # passez temporairement le minimum de réplicas à 1, puis relancez.
-    if az containerapp hostname bind \
-        --hostname $CUSTOM_DOMAIN \
-        --name $FRONTEND_NAME \
-        --resource-group $RESOURCE_GROUP \
-        --environment $ACA_ENV \
-        --validation-method CNAME; then
-        echo -e "${GREEN}[SUCCES] Domaine ${CUSTOM_DOMAIN} rattaché.${NC}"
-        DOMAIN_BOUND="true"
-    else
-        echo -e "${YELLOW}[ATTENTION] Rattachement impossible pour le moment. Vérifiez que le CNAME et le TXT${NC}"
-        echo -e "${YELLOW}            ci-dessus sont créés et propagés, puis relancez ce script.${NC}"
-    fi
-fi
+# if [ "$ALREADY_BOUND" != "0" ] && [ -n "$ALREADY_BOUND" ]; then
+#     echo -e "${YELLOW}[INFO] Le domaine ${CUSTOM_DOMAIN} est déjà rattaché. Rien à faire.${NC}"
+#     DOMAIN_BOUND="true"
+# else
+#     echo -e "${GREEN}[INFO] Rattachement du domaine avec certificat managé (gratuit)...${NC}"
+#     # Un échec (DNS pas encore propagé, par exemple) ne doit pas faire échouer tout le script.
+#     # Si la validation du certificat échoue avec l'app en "scale to zero",
+#     # passez temporairement le minimum de réplicas à 1, puis relancez.
+#     if az containerapp hostname bind \
+#         --hostname $CUSTOM_DOMAIN \
+#         --name $FRONTEND_NAME \
+#         --resource-group $RESOURCE_GROUP \
+#         --environment $ACA_ENV \
+#         --validation-method CNAME; then
+#         echo -e "${GREEN}[SUCCES] Domaine ${CUSTOM_DOMAIN} rattaché.${NC}"
+#         DOMAIN_BOUND="true"
+#     else
+#         echo -e "${YELLOW}[ATTENTION] Rattachement impossible pour le moment. Vérifiez que le CNAME et le TXT${NC}"
+#         echo -e "${YELLOW}            ci-dessus sont créés et propagés, puis relancez ce script.${NC}"
+#     fi
+# fi
 
 # ==========================================
 # RESUME DU DEPLOIEMENT
