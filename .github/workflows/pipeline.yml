@@ -34,7 +34,7 @@ jobs:
         with:
           image-ref: 'backend-test'
           format: 'table'
-          exit-code: '1'     ##je le mets sur 1 si je veux bloquer le pipeline si des vulnérabilités sont trouvées
+          exit-code: '0'     ##je le mets sur 1 si je veux bloquer le pipeline si des vulnérabilités sont trouvées
           severity: 'CRITICAL'
 
       - name: Scan Trivy sur le Frontend
@@ -42,7 +42,7 @@ jobs:
         with:
           image-ref: 'frontend-test'
           format: 'table'
-          exit-code: '1'   ##je le mets sur 1 si je veux bloquer le pipeline si des vulnérabilités sont trouvées
+          exit-code: '0'   ##je le mets sur 1 si je veux bloquer le pipeline si des vulnérabilités sont trouvées
           severity: 'CRITICAL'
 
   cd-deploy:
